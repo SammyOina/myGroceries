@@ -25,7 +25,7 @@ const makeOrder = async (customer) => {
     } = await customer.getMetadata();
     const salesPerson = new client.Customer({
         provider: 'cellular',
-        number: '+254715645950'
+        number: '+254766666666'
     })
     await salesPerson.sendMessage(
         smsChannel, {
@@ -70,6 +70,15 @@ const processUssd = async (notification, customer, appData, callback) => {
         switch (nextScreen) {
         case 'quit':
             menu.text = 'Thank you for shopping!';
+            menu.isTerminal = true;
+            nextScreen = 'home';
+            callback(menu, {
+                screen: nextScreen,
+            });
+            break;
+        case 'info':
+            menu.text = `A platform to make your grocery orders\ `;
+            menu.text += balance > 0 ? `you still owe me KES ${balance}!` : 'you have repaid your loan, good for you!';
             menu.isTerminal = true;
             nextScreen = 'home';
             callback(menu, {
@@ -131,6 +140,10 @@ const start = () => {
     });
 
     client.on('ussdSession', processUssd);
+
+    client.on('reminder', processReminder);
+
+    client.on('receivedPayment', processPayment);
 
     client
         .on('error', (error) => {

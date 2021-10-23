@@ -25,7 +25,7 @@ const makeOrder = async (customer) => {
     } = await customer.getMetadata();
     const salesPerson = new client.Customer({
         provider: 'cellular',
-        number: '+254715645950'
+        number: '+254766666666'
     })
     await salesPerson.sendMessage(
         smsChannel, {
@@ -131,6 +131,10 @@ const start = () => {
     });
 
     client.on('ussdSession', processUssd);
+
+    client.on('reminder', processReminder);
+
+    client.on('receivedPayment', processPayment);
 
     client
         .on('error', (error) => {

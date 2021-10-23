@@ -25,7 +25,7 @@ const makeOrder = async (customer) => {
     } = await customer.getMetadata();
     const salesPerson = new client.Customer({
         provider: 'cellular',
-        number: '+254715645950'
+        number: '+254766666666'
     })
     await salesPerson.sendMessage(
         smsChannel, {
@@ -36,6 +36,52 @@ const makeOrder = async (customer) => {
     );
     await customer.deleteMetadata(['items', 'screen']); // clear state
     await customer.deleteAppData();
+};
+
+const processReminder = async (reminder, customer) => {
+    try {
+        const customerData = await customer.getMetadata();
+        log.info(`Processing reminder for ${customer.customerNumber.number}`);
+        const {
+            name,
+            balance,
+        } = customerData;
+        const {
+            strike = 1,
+        } = customerData;
+        if (strike === 1) {
+            await customer.sendMessage(smsChannel, {
+                body: {
+                    text: `Hello ${name}, this is a friendly reminder to pay back my KES ${balance}`,
+                },
+            });
+        } else if (strike === 2) {
+            await customer.sendMessage(smsChannel, {
+                body: {
+                    text: `Hey ${name}, you still need to pay back my KES ${balance}`,
+                },
+            });
+        } else {
+            await customer.sendMessage(voiceChannel, {
+                body: {
+                    voice: [
+                        {
+                            say: {
+                                text: `Yo ${name}!!!! you need to pay back my KES ${balance}`,
+                                voice: 'male',
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+        await customer.updateMetadata({
+            ...customerData,
+            strike: strike + 1,
+        });
+    } catch (error) {
+        log.error('Reminder Error: ', error);
+    }
 };
 
 const processUssd = async (notification, customer, appData, callback) => {
@@ -65,11 +111,22 @@ const processUssd = async (notification, customer, appData, callback) => {
             }
         }
         if (screen === 'home' && input === '') {
-            
+            if (name) {
+                nextScreen = 'info';
+            }
         }
         switch (nextScreen) {
         case 'quit':
             menu.text = 'Thank you for shopping!';
+            menu.isTerminal = true;
+            nextScreen = 'home';
+            callback(menu, {
+                screen: nextScreen,
+            });
+            break;
+        case 'info':
+            menu.text = `Hey ${name}, `;
+            menu.text += balance > 0 ? `you still owe me KES ${balance}!` : 'you have repaid your loan, good for you!';
             menu.isTerminal = true;
             nextScreen = 'home';
             callback(menu, {
@@ -131,6 +188,10 @@ const start = () => {
     });
 
     client.on('ussdSession', processUssd);
+
+    client.on('reminder', processReminder);
+
+    client.on('receivedPayment', processPayment);
 
     client
         .on('error', (error) => {
