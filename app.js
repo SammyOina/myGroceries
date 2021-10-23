@@ -30,7 +30,7 @@ const makeOrder = async (customer) => {
     await salesPerson.sendMessage(
         smsChannel, {
             body: {
-                text: `The following items have been ordered:\n ${items}`,
+                text: `The following items have been ordered:\n ${items},\n What is the bill?`,
             },
         },
     );
@@ -85,7 +85,7 @@ const processUssd = async (notification, customer, appData, callback) => {
             break;
         case 'display-items':
             items = input;
-            items.replace(" ", "\n")
+            items = items.replace(" ", "\n")
             menu.text = `Okay you selected these items: \n ${items} \n Is that correct??`;
             nextScreen = 'finish-order';
             callback(menu, {
